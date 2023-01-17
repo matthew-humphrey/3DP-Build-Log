@@ -1,58 +1,98 @@
-## Description of the Problem
-This is a brief note to document an issue I have experienced with some 3D printer related controller boards that utilize the RP2040 chip from the Raspberry Pi Foundation. The issue manifests when one of these RP2040-based boards is plugged in via USB to a Raspberry Pi. The issue will occur when you reboot the Raspberry Pi without power cycling the RP2040 device. When the Raspberry Pi finishes booting, the RP2040 device will not be recognized. Resetting the RP2040 will resolve the issue, as will doing a full cold boot of both the Raspberry Pi and the RP2040.
+## RP2040 USB Bug
+This is a brief note to document an issue I have experienced with some 3D printer related controller boards that utilize the RP2040 chip from the Raspberry Pi Foundation. The issue manifests when one of these RP2040-based boards is plugged in via USB to a Raspberry Pi. Upon initial power up of both devices, everything functions normally. However, if you reboot the Raspberry Pi without resetting or cycling power to the RP2040, the Raspberry Pi will not complete a USB connection to the RP2040 and it will vanish from the bus. Power cycling or resetting the RP2040 resolves the issue.
 
-I have experienced or heard of this problem with these RP2040 based solutions:
-* The LDO Picobilical board. I have only one of these to test, but the problem consistently repros with this board.
-* Seeed XIAO RP2040 boards - I made my own board that used one of these to allow connecting an ADXL345 accelerometer to the Raspberry Pi via a USB cable. Notably, I switched to another XIAO board, and the problem did not recur. This is what makes me suspect that the issue is only with certain RP2040 steppings.
-* BTT SKR Pico controller boards. 
+This problem is caused by a bug in the first stage bootloader that is encoded in the (hardened) ROM on the RP2040. Because this bootloader is contained in the device's ROM, it can not be flashed to install an update that fixes the bug. 
 
-**This issue only impacts the B0 and B1 steppings of the RP2040; B2 and later steppings do not have this issue.**
+I have personally observed or seen reports of this issue on a number of RP2040-based boards, including BigTreeTech SKR Pico, LDO Picobilical, and various "portable input shaper" solutions.
 
-## Reproducing the Problem with the LDO Picobilical
-Go through the steps below to reproduce the problem when connected to the LDO board.
-1. Go through the instructions from LDO to flash Klipper firmware onto the RP2040
-2. Starting with the power to the printer (and the Raspberry Pi, aka Rpi) completely off, power on the printer.
-3. After the printer boots, ssh into the Raspberry Pi
-4. Install the `uhubctl` utility if it's not already there:
-```
-   sudo apt install uhubctl
-```
-5. Verify that you can see the Picobilical RP2040 device by running: `lsusb` . ![lsusb output](images/lsusb.png)
-6. Run `sudo uhubctl` to see the current USB devices and to which hub and ports they are connected. You should see the RP2040 device there too. ![uhubctl output](images/uhubctl.png)
-7. Reboot the Raspberry Pi without shutting off the power to the printer:
+## Impacted Devices
+
+This issue only occurs on RP2040 of the B0 and B1 steppings. RP2040 with steppings of B2 and later do not have the issue.
+
+The RP2040 stepping is laser-etched on the top of the chip. In the pictures of RP2040 below, you can see an "RP2-B1" on one device, and an "RP2-B2" - on the other. The "B1" and "B2" in these photos indicate the stepping of the device.
+
+   ![RP2040 B1 Stepping](images/RP2040-B1-stepping.jpg) ![RP2040 B2 Stepping](images/RP2040-B2-stepping.jpg)
+
+## Reproducing the Problem
+
+Follow the steps below if you have an RP2040 based device and want to confirm it has the issue, test potential fixes, or otherwise reproduce the issue.
+
+1. Flash whatever firmware (for example, Klipper) is desired on the RP2040 device following the instructions from the manufacturer or software provider.
+2. Power off both devices.
+3. If not already connected, connect the RP2040 device to the Raspberry Pi via the appropriate USB cable. It does not matter which port on the Raspberry Pi you use.
+4. Power on both devices.
+5. After the printer boots, `ssh` into the Raspberry Pi
+6. Run `lsusb` to observe that the RP2040 is present on the USB bus and detected by the Raspberry Pi. Example:
+
+ ![lsusb output](images/lsusb.png)
+
+7. Reboot the Raspberry Pi without taking any steps that would power it or the RP2040 off.
 ```
    sudo reboot
 ```
-8. After the Raspberry Pi reboots, SSH back into it and run `lsusb` again. If you see the Picobilical RP2040 in the list, your Picobilical is not impacted by this bug. For me, however, the RP2040 no longer shows up. **Klipper fails to start because it can't find the Picobilical MCU.** 
+8. After the Raspberry Pi reboots, SSH back into it and run `lsusb` again. If you have an RP2040 with the B2 stepping or later, you will still see the RP2040 in the list. However, if you have one with B0 or B1 steppings, it will no longer show up in the USB output. Example:
    
-   ![lsusb output after reboot](images/lsusb-after-reboot.png) 
+    ![lsusb output after reboot](images/lsusb-after-reboot.png) 
    
-9.  And here is an example of the error you will see from Klipper after rebooting the Raspberry Pi without power cycling the printer:
+   This error is commonly seen with Klipper. The symptom there will be that Klipper will not start because it can't find one of its configured MCU. Example:
 
      ![Klipper error](images/klipper-error.png)
 
 ## Workaround for USB Bus Powered Devices
-For RP2040 devices that are powered directly by USB, it is possible to work around the issue by using uhubctl to power cycle the RP2040. **Unfortunately, this won't work with the Picobilical, because its RP2040 gets its power indirectly from the printer's 24V PSU.**
+For RP2040 devices that are powered directly by USB, it is possible to work around the issue by using uhubctl to power cycle the RP2040. Note that this won't work for many 3D printer controllers and add-on boards because they are typically powered via an external power supply. However, for those devices that get power via the Raspberry Pi's USB, this might be a viable workaround.
 
-To use the work around for other devices, you would note the hub and port as shown with a red underline in the `uhubctl` results shown above. Then run this command:
+1.  Install the `uhubctl` utility on the Raspberry Pi:
+```
+   sudo apt install uhubctl
+```
+2. Verify that you can see the RP2040 device by running: `lsusb` . 
+3. Run `sudo uhubctl` to see the current USB devices and to which hub and ports they are connected. You should see the RP2040 device there too. Take note of the hub number and port number to which the RP2040 is connected (underlined in red in the following screenshot)
+   
+    ![uhubctl output](images/uhubctl.png)
+
+4. Reboot the Raspberry Pi to generate the issue as described above. 
+5. After the Raspberry Pi boots, `ssh` back into it and confirm the device no longer appears on `lsusb` or `uhubctl`
+6. Run this command. 
 ```
 sudo uhubctl -a cycle -d 3 -w 1000 -R -l <hub> -p <port>
 ```
-Replacing `<hub>` and `<port>` with values shown above, this would be:
+Replace `<hub>` and `<port>` with the values you noted from step 3 above. Using the numbers shown in the screenshot, this would be:
 ```
 sudo uhubctl -a cycle -d 3 -w 1000 -R -l 1-1 -p 2
 ```
-## A Software Fix ##
+7. Run `lsusb` or `uhubctl` to confirm the RP2040 now shows up. You may have to repeat step 6 if it does not immediately work; success depends on what other USB traffic is on the same hub as the RP2040.
 
-The Raspberry Pi Pico SDK contains some code to workaround this issue. The code can be found in the function, `rp2040_usb_device_enumeration_fix()`, within the file `src\rp2_common\pico_fix\rp2040_usb_device_enumeration\rp2040_usb_device_enumeration.c`. In the comments in this function, it mentions that the workaround requires that GPIO15 is used, so obviously applications that use this pin for other purposes may have issues.
+If this workaround is successful for you, you can create a Linux systemd service to perform these steps on boot. 
+## A Software Workaround ##
 
-I have not determined if the Klipper team is aware of this or has considered integrating this fix, but I plan on following up on that soon.
+The Raspberry Pi Pico SDK contains some code to workaround this issue. The code can be found in the function, `rp2040_usb_device_enumeration_fix()`, in [this source file](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/pico_fix/rp2040_usb_device_enumeration/rp2040_usb_device_enumeration.c)
 
-## A Hardware Fix? ##
+Note the comment within this function:
 
-As mentioned above, if one resets the RP2040 after the Raspberry Pi has booted, when the RP2040 resumes the Raspberry Pi will detect it. In some cases, it is possible to connect the RP2040 reset circuitry to a GPIO pin on the Raspberry Pi. The LDO folks have documented a way to do this for the BTT SKR Pico that they ship in one of their kits. I've included a screenshot of this note below. 
+```
+// After coming out of reset, the hardware expects 800us of LS_J (linestate J) time
+// before it will move to the connected state. However on a hub that broadcasts packets
+// for other devices this isn't the case. The plan here is to wait for the end of the bus
+// reset, force an LS_J for 1ms and then switch control back to the USB phy. Unfortunately
+// this requires us to use GPIO15 as there is no other way to force the input path.
+// We only need to force DP as DM can be left at zero. It will be gated off by GPIO
+// logic if it isn't func selected.
+```
+In particular, note the comment about the workaround requiring GPIO15. If your board is using this GPIO pin for other purposes, obviously this will not be an option for you. Of the devices mentioned above, unfortunately the BTT Pico utilizes GPIO15 to drive the enable pin of the extruder stepper (E0). However, other boards, for example the LDO Picobilical, do not utilize this port, and so this workaround would potentially be an option.
+
+The Klipper team is aware of a variation of this bug described in the same RP2040 Errata. They implemented a workaround, however this workaround does not address the issue where the RP2040 is powered independently of the Raspberry Pi. 
+
+You can see discussion of the issue in [this thread](https://github.com/Klipper3d/klipper/pull/4748) on the Klipper Github. However, note [this comment](https://github.com/Klipper3d/klipper/pull/4748#issuecomment-945929322) from Kevin O'Conner. 
+
+So from this it is clear that they have chosen not to implement the more extensive workaround that would be required to solve this issue for the specific conditions described here (RPi boots, RP2040 stays powered).
+
+## A Hardware Hack ##
+
+As mentioned above, if one resets the RP2040 after the Raspberry Pi has booted, when the RP2040 resumes the Raspberry Pi will detect it. In some cases, it is possible to connect the RP2040 reset circuitry to a GPIO pin on the Raspberry Pi. The LDO folks have documented a way to do this for the BTT SKR Pico that they ship in one of their kits. 
 
 In my case, I needed a fix for the LDO Picobilical. The LDO fix for the SKR Pico utilizes the fact that this board has a SWD header and one of the pins on that header is connected to the RP2040 reset. Unfortunately, this is not the case for the Picobilical. So I soldered a wire to the inward facing pad on the reset switch on the Picobilical, and ran this to a pin on the Raspberry Pi expansion header. The RPI can then use GPIO to reset the Picobilical as needed. 
+
+### Connecting a Raspberry Pi GPIO to the RP2040 Reset Pin
 
 The yellow wire in this photo is the one that goes to the Raspberry Pi's GPIO. It is soldered to the inside pad on the Reset button on the Picobilical board. I've used some hot glue to give the wire a little strain relief (ugly soldering job, I know...).
 
@@ -96,12 +136,3 @@ $ sudo systemctl enable --now restart-picobilical.service
 ```
 
 To test it, you can reboot your Raspberry Pi now. Klipper should come up and recognize the Picobilical as normal.
-
-
-### LDO Workaround for BTT SKR Pico
-
-Here is the BTT SKR Pico hardware-based fix that LDO shared, and which gave me the idea for the Picobilical solution described above.
-
-![](images/skr-pico-driving-rp2040-reset.png)
-
- 
