@@ -2,7 +2,7 @@
 
 This document describes a mistake that I made that resulted in the destruction of my LDO Picobilical board and the Raspberry Pi in my Voron V0 printer. While ultimate responsibility for this mistake is mine, it due in part to incorrect documentation in the [LDO Picobilical Github repo]([MotorDynamicsLab/LDO-Picobilical (github.com)](https://github.com/MotorDynamicsLab/LDO-Picobilical)).  I am documenting the mistake here to help LDO correct the documentation in the hopes that no one else makes this mistake.
 
-==LATE BREAKING UPDATE: The Picobilical board that I received was a pre-production board, and not the final version. I have been told that the pinout diagram matches the production boards.  So unless you also have a pre-production board, you can disregard the remainder of this document. However, I do recommend you carefully check the silkscreen on the board, and possibly even check that there is not continuity between 24V and 5V.==
+**LATE BREAKING UPDATE: The Picobilical board that I received was a pre-production board, and not the final version. I have been told that the pinout diagram matches the production boards.  So unless you also have a pre-production board, you can disregard the remainder of this document. However, I do recommend you carefully check the silkscreen on the board, and possibly even check that there is not continuity between 24V and 5V.**
 
 ## Fan Jumpers
 The Picobilical supports both 5V and 24V (or whatever your VIN voltage is) for the hotend and part-cooling fans. The voltage for each of these fans can be selected independently via jumpers in the upper right hand corner of the fan. 
