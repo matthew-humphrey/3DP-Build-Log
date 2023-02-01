@@ -29,7 +29,7 @@ To see why this configuration is wrong, let's look at a photo of the board with 
 
 ![Image of fan voltage headers with no jumpers installed](images/IMG_2015.jpg)
 
-Here you can see that the jumpers for the fans are split left and right and the voltages top and bottom, as not fans on top and bottom and voltages on left and right as shown in the diagram. In addition to the documentation being dangerously misleading, this way of laying out jumpers on the board is suboptional because it makes this kind of mistake possible. A better way of laying out the jumpers is as shown in the pinout diagram, with the two rows of headers spaced far enough apart that a jumper can not be placed across rows. I assume this was a late-breaking change that the LDO PCB designer made in  order to fit things on the board. 
+Here you can see that the jumpers for the fans are split left and right and the voltages top and bottom, as not fans on top and bottom and voltages on left and right as shown in the diagram. In addition to the documentation being dangerously misleading, this way of laying out jumpers on the board is suboptional because it makes this kind of mistake possible. A better way of laying out the jumpers is as shown in the pinout diagram, with the two rows of headers spaced far enough apart that a jumper can not be placed across rows (Update: Which is how LDO has it on the production boards).
 
 ## Correct Jumper Configuration for 24V PCF and 24V HEF
 
