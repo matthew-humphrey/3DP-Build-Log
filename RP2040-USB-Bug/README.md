@@ -7,7 +7,7 @@ I have personally observed or seen reports of this issue on a number of RP2040-b
 
 ## Impacted Devices
 
-This issue only occurs on RP2040 of the B0 and B1 steppings. RP2040 with steppings of B2 and later do not have the issue.
+At least one of the USB issues only occurs on RP2040 of the B0 and B1 steppings. RP2040 with steppings of B2 and later made a change to fix a USB issue. However, there are still reports of USB-related boot visibility issues on devices with the B2 stepping, so it seems it is more complicated than a single bug that was fixed.
 
 The RP2040 stepping is laser-etched on the top of the chip. In the pictures of RP2040 below, you can see an "RP2-B1" on one device, and an "RP2-B2" - on the other. The "B1" and "B2" in these photos indicate the stepping of the device.
 
