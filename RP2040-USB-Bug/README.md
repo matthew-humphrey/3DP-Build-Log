@@ -62,7 +62,29 @@ sudo uhubctl -a cycle -d 3 -w 1000 -R -l 1-1 -p 2
 ```
 7. Run `lsusb` or `uhubctl` to confirm the RP2040 now shows up. You may have to repeat step 6 if it does not immediately work; success depends on what other USB traffic is on the same hub as the RP2040.
 
-If this workaround is successful for you, you can create a Linux systemd service to perform these steps on boot. 
+If this workaround is successful for you, you can create a Linux systemd service to perform these steps on boot.
+For example, a service created at `/etc/systemd/system/restart-usb.service`:
+
+```
+[Unit]
+Description=Restart USB before Klipper starts
+RequiredBy=klipper.service
+
+[Service]
+ExecStart=uhubctl -a cycle -d 3 -w 1000 -R -l 1-1 -p 2
+
+[Install]
+WantedBy=multi-user.target
+```
+
+And enable the service:
+
+```console
+sudo systemctl enable restart-usb.service
+```
+
+After a reboot your Klipper should detect the RP2040 and not show any firmware (e.g. restart needed) errors.
+
 ## A Software Workaround ##
 
 The Raspberry Pi Pico SDK contains some code to workaround this issue. The code can be found in the function, `rp2040_usb_device_enumeration_fix()`, in [this source file](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/pico_fix/rp2040_usb_device_enumeration/rp2040_usb_device_enumeration.c)
